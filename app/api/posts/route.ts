@@ -30,3 +30,40 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+// GET /api/posts
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const pageSize = parseInt(searchParams.get('pageSize') || '10')
+    const skip = (page - 1) * pageSize
+
+    const posts = await prisma.post.findMany({
+      skip,
+      take: pageSize,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    })
+
+    const total = await prisma.post.count()
+
+    return NextResponse.json(
+      { success: true, data: posts, page, pageSize, total },
+      { status: 200 }
+    )
+  } catch (error) {
+    console.error('GET /api/posts error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch posts' },
+      { status: 500 }
+    )
+  }
+}
